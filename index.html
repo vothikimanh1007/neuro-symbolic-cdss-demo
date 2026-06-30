@@ -3,159 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neuro-Symbolic CDSS Dashboard</title>
+    <title>Live Neuro-Symbolic CDSS</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #2c3e50;
+            --primary: #1a252f;
             --bg-color: #f4f7f6;
-            --green: #27ae60;
-            --yellow: #f39c12;
+            --green: #2ecc71;
+            --yellow: #f1c40f;
             --red: #e74c3c;
+            --light-gray: #ecf0f1;
         }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0; padding: 0; background-color: var(--bg-color); color: #333;
-        }
-        header {
-            background-color: var(--primary); color: white;
-            padding: 2rem; text-align: center;
-        }
-        header h1 { margin: 0 0 10px 0; font-size: 1.8rem; }
-        header p { margin: 0; font-size: 1rem; opacity: 0.9; }
-        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg-color); color: #333; }
+        header { background-color: var(--primary); color: white; padding: 1.5rem; text-align: center; }
+        header h1 { margin: 0 0 5px 0; font-size: 1.8rem; }
+        header p { margin: 0; font-size: 1rem; color: var(--light-gray); }
+        
+        .container { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem; }
+        .top-row { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem; }
         .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .card h2 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .card h2 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.2rem; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #ecf0f1; font-weight: 600; }
+        /* Monitor UI */
+        .monitor-panel { background: #2c3e50; color: white; padding: 1.5rem; border-radius: 8px; text-align: center; }
+        .controls { margin-bottom: 1rem; }
+        .btn { padding: 10px 15px; font-size: 0.9rem; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .btn-start { background-color: var(--green); color: black; }
+        .btn-stop { background-color: var(--red); color: white; margin-left: 10px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        .badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; color: white; display: inline-block; }
-        .badge.green { background-color: var(--green); }
-        .badge.yellow { background-color: var(--yellow); color: #333; }
+        .data-readout { display: flex; justify-content: space-around; margin: 1.5rem 0; font-family: monospace; font-size: 1.4rem; }
+        .metric { display: flex; flex-direction: column; align-items: center; }
+        .metric-label { font-size: 0.75rem; text-transform: uppercase; color: #bdc3c7; font-family: sans-serif; letter-spacing: 1px; }
+        
+        .status-indicator { padding: 15px; border-radius: 6px; font-weight: bold; font-size: 1.1rem; transition: background-color 0.3s; background-color: #34495e; border: 2px solid #2c3e50; }
+        .status-indicator.green { background-color: rgba(46, 204, 113, 0.2); border-color: var(--green); color: var(--green); }
+        .status-indicator.yellow { background-color: rgba(241, 196, 15, 0.2); border-color: var(--yellow); color: var(--yellow); }
+        .status-indicator.red { background-color: rgba(231, 76, 60, 0.2); border-color: var(--red); color: var(--red); }
+        
+        /* Table Styles */
+        .table-container { max-height: 350px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; font-weight: 600; position: sticky; top: 0; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; color: white; display: inline-block; font-size: 0.75rem;}
+        .badge.green { background-color: var(--green); color: black;}
+        .badge.yellow { background-color: var(--yellow); color: black; }
         .badge.red { background-color: var(--red); }
-        .narrative { font-size: 0.85em; color: #555; line-height: 1.4; }
+        
+        /* Live Dot Animation */
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .live-dot { height: 10px; width: 10px; background-color: var(--red); border-radius: 50%; display: inline-block; animation: pulse 1s infinite; visibility: hidden; }
+        .is-live .live-dot { visibility: visible; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Multimodal Neuro-Symbolic Clinical Decision Support</h1>
-    <p>Non-Euclidean Topological Representations as Real-Time Guardrails for Medical LLMs</p>
+    <h1>Multimodal Neuro-Symbolic CDSS</h1>
+    <p>Topological Guardrails Intercepting LLM Hallucinations in Real-Time</p>
 </header>
 
 <div class="container">
-    <div class="grid">
+    <div class="top-row">
         <div class="card">
-            <h2>Topological Profile Constraints</h2>
-            <canvas id="statsChart"></canvas>
-            <p style="font-size: 0.8em; margin-top: 15px; color: #7f8c8d;">
-                *Data reflects embedded Takens' delay and Vietoris-Rips filtration metrics. Safe bounds act as hard mathematical guardrails.
-            </p>
+            <h2>System Control <span class="live-dot" id="liveDot"></span></h2>
+            <div class="monitor-panel" id="monitorPanel">
+                <div class="controls">
+                    <button class="btn btn-start" id="startBtn" onclick="startSimulation()">▶ START STREAM</button>
+                    <button class="btn btn-stop" id="stopBtn" onclick="stopSimulation()" disabled>⏸ PAUSE</button>
+                </div>
+                
+                <div class="data-readout">
+                    <div class="metric"><span class="metric-label">Record</span><span id="display-id">---</span></div>
+                    <div class="metric"><span class="metric-label">H1 Entropy</span><span id="display-h1">--.--</span></div>
+                    <div class="metric"><span class="metric-label">Amplitude</span><span id="display-amp">--.---</span></div>
+                </div>
+
+                <div id="statusIndicator" class="status-indicator">
+                    SYSTEM IDLE: AWAITING DATA
+                </div>
+            </div>
         </div>
         
         <div class="card">
-            <h2>System Overview</h2>
-            <p><strong>Status:</strong> <span style="color: #27ae60; font-weight: bold;">Active</span></p>
-            <p>This dashboard demonstrates the integration of Topological Data Analysis (TDA) with Clinical Large Language Models (LLMs).</p>
-            <p>By extracting scale-invariant tokens (<strong>H1 Persistence Entropy</strong> and <strong>Topological Amplitude</strong>) from continuous ECG signals, the system establishes a mathematical guardrail. If these topological coordinates breach safe mathematical bounds, the system intercepts and halts potential semantic hallucinations from the LLM.</p>
+            <h2>Live Topological Telemetry</h2>
+            <canvas id="liveChart" height="100"></canvas>
         </div>
     </div>
 
     <div class="card">
-        <h2>Live Clinical NLP Adjudication Log</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Record</th>
-                    <th>H1 Entropy</th>
-                    <th>Amplitude</th>
-                    <th>Guardrail Status</th>
-                    <th>LLM Narrative Output</th>
-                </tr>
-            </thead>
-            <tbody id="nlpTableBody">
-                </tbody>
-        </table>
+        <h2>Real-Time LLM Adjudication Log</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%">Time</th>
+                        <th style="width: 10%">Record ID</th>
+                        <th style="width: 10%">H1 Entropy</th>
+                        <th style="width: 10%">Amplitude</th>
+                        <th style="width: 15%">Guardrail Status</th>
+                        <th style="width: 45%">LLM Clinical Narrative</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody">
+                    </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    // ==========================================
-    // 1. EMBEDDED DATASETS
-    // ==========================================
-    
-    // Extracted from tda_statistical_profile.json
-    const statsProfile = {
-        "NORMAL_SINUS": { "H1": 5.4159, "Amp": 0.0630 },
-        "NOISY_SIGNAL": { "H1": 5.7102, "Amp": 0.0433 },
-        "ARRHYTHMIA_PVC": { "H1": 4.9128, "Amp": 0.0527 }
+    // 1. STATISTICAL BOUNDARIES (From JSON Profile)
+    const bounds = {
+        H1_Low: 3.5721, H1_High: 7.2598,
+        Amp_Low: 0.0212, Amp_High: 0.1048
     };
 
-    // Extracted from tda_nlp_analysis_results.csv
-    const nlpResults = [
-        { id: "231", h1: 6.0438, amp: 0.0897, code: "CLINICAL_CODE_GREEN", narrative: "SYSTEM REPORT: Stable, healthy cardiac state verified. Attractor manifold retains perfectly balanced and continuous toroidal loops." },
-        { id: "100", h1: 6.0803, amp: 0.0445, code: "CLINICAL_CODE_YELLOW", narrative: "CLINICAL CONSULTATION: High-frequency topological noise or mechanical motion artifact detected. The patient is physically safe; please verify and stabilize the ECG electrode straps." },
-        { id: "101", h1: 5.7903, amp: 0.0228, code: "CLINICAL_CODE_YELLOW", narrative: "CLINICAL CONSULTATION: High-frequency topological noise or mechanical motion artifact detected. Attractor loops show high complexity but co-occurring low amplitude." },
-        { id: "234", h1: 8.8554, amp: 0.0593, code: "CLINICAL_CODE_RED", narrative: "GUARDRAIL ALERT: Topological markers indicative of severe anomaly or signal corruption. LLM generation halted to prevent clinical hallucination." }
+    // 2. SIMULATION DATA SEQUENCE
+    const simulationSequence = [
+        { id: "100", h1: 6.0422, amp: 0.1006 }, // Normal
+        { id: "100", h1: 5.8852, amp: 0.0992 }, // Normal
+        { id: "100", h1: 5.7142, amp: 0.0799 }, // Normal
+        { id: "101", h1: 5.7903, amp: 0.0208 }, // Low Amp (Yellow)
+        { id: "101", h1: 6.5240, amp: 0.0191 }, // Low Amp (Yellow)
+        { id: "231", h1: 6.0438, amp: 0.0896 }, // Normal
+        { id: "234", h1: 8.8554, amp: 0.0593 }, // High H1 (Red)
+        { id: "234", h1: 8.8794, amp: 0.0516 }, // High H1 (Red)
+        { id: "234", h1: 5.5025, amp: 0.0593 }  // Normal
     ];
 
-    // ==========================================
-    // 2. RENDER CHART (Chart.js)
-    // ==========================================
-    const ctx = document.getElementById('statsChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
+    let simulationInterval;
+    let currentIndex = 0;
+    const MAX_CHART_POINTS = 10;
+
+    // UI Elements
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const monitorPanel = document.getElementById('monitorPanel');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const tbody = document.getElementById('logTableBody');
+
+    // 3. INITIALIZE LIVE CHART (Dual Y-Axis)
+    const ctx = document.getElementById('liveChart').getContext('2d');
+    const liveChart = new Chart(ctx, {
+        type: 'line',
         data: {
-            labels: ['Normal Sinus', 'Noisy Signal', 'Arrhythmia PVC'],
+            labels: [], // Time stamps
             datasets: [
                 {
-                    label: 'Mean H1 Entropy',
-                    data: [statsProfile.NORMAL_SINUS.H1, statsProfile.NOISY_SIGNAL.H1, statsProfile.ARRHYTHMIA_PVC.H1],
-                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                    borderColor: 'rgba(41, 128, 185, 1)',
-                    borderWidth: 1
+                    label: 'H1 Entropy',
+                    data: [],
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    yAxisID: 'y'
                 },
                 {
-                    label: 'Mean Amplitude (Scaled x100)',
-                    data: [statsProfile.NORMAL_SINUS.Amp * 100, statsProfile.NOISY_SIGNAL.Amp * 100, statsProfile.ARRHYTHMIA_PVC.Amp * 100],
-                    backgroundColor: 'rgba(231, 76, 60, 0.7)',
-                    borderColor: 'rgba(192, 57, 43, 1)',
-                    borderWidth: 1
+                    label: 'Amplitude',
+                    data: [],
+                    borderColor: '#9b59b6',
+                    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    yAxisID: 'y1'
                 }
             ]
         },
         options: {
             responsive: true,
-            scales: { y: { beginAtZero: true } },
+            animation: { duration: 400 },
+            scales: {
+                x: { display: true, title: { display: true, text: 'Time Window' } },
+                y: { type: 'linear', display: true, position: 'left', min: 2.0, max: 10.0, title: { display: true, text: 'H1 Bounds' } },
+                y1: { type: 'linear', display: true, position: 'right', min: 0.0, max: 0.15, grid: { drawOnChartArea: false }, title: { display: true, text: 'Amp Bounds' } }
+            },
             plugins: { legend: { position: 'top' } }
         }
     });
 
-    // ==========================================
-    // 3. RENDER TABLE DATA
-    // ==========================================
-    const tbody = document.getElementById('nlpTableBody');
-    nlpResults.forEach(record => {
-        const tr = document.createElement('tr');
+    // 4. SIMULATION LOGIC
+    function startSimulation() {
+        startBtn.disabled = true; stopBtn.disabled = false;
+        document.getElementById('liveDot').parentElement.classList.add('is-live');
         
-        // Determine badge styling based on the clinical code
-        let badgeClass = 'green';
-        let statusText = 'SAFE';
-        if (record.code.includes('YELLOW')) { badgeClass = 'yellow'; statusText = 'WARNING'; }
-        if (record.code.includes('RED')) { badgeClass = 'red'; statusText = 'HALTED'; }
+        processNextRecord(); // Process first immediately
+        simulationInterval = setInterval(processNextRecord, 2000); // Trigger every 2 seconds
+    }
 
+    function stopSimulation() {
+        clearInterval(simulationInterval);
+        startBtn.disabled = false; stopBtn.disabled = true;
+        document.getElementById('liveDot').parentElement.classList.remove('is-live');
+        statusIndicator.className = 'status-indicator';
+        statusIndicator.innerText = "STREAM PAUSED";
+    }
+
+    function processNextRecord() {
+        const data = simulationSequence[currentIndex];
+        
+        // --- 1. Update Panel UI ---
+        document.getElementById('display-id').innerText = data.id;
+        document.getElementById('display-h1').innerText = data.h1.toFixed(4);
+        document.getElementById('display-amp').innerText = data.amp.toFixed(4);
+
+        // --- 2. Evaluate Constraints ---
+        const h1Safe = (data.h1 >= bounds.H1_Low && data.h1 <= bounds.H1_High);
+        const ampSafe = (data.amp >= bounds.Amp_Low && data.amp <= bounds.Amp_High);
+        const isExtreme = (data.h1 > 8.0 || data.h1 < 2.5);
+
+        let stateClass = 'green'; let statusText = 'SAFE';
+        let narrative = "SYSTEM REPORT: Stable cardiac state verified. Attractor manifold retains continuous toroidal loops. LLM permitted.";
+
+        if (isExtreme) {
+            stateClass = 'red'; statusText = 'HALTED';
+            narrative = "GUARDRAIL TRIGGERED: Severe topological anomaly. Parameters out of physiological bounds. LLM generation halted.";
+        } else if (!h1Safe || !ampSafe) {
+            stateClass = 'yellow'; statusText = 'WARNING';
+            narrative = "CLINICAL CONSULT: Topological noise/deviation detected. Context added to LLM prompt. Verify ECG straps.";
+        }
+
+        statusIndicator.className = `status-indicator ${stateClass}`;
+        statusIndicator.innerText = `SYSTEM STATUS: ${statusText}`;
+
+        // --- 3. Update Chart ---
+        const now = new Date();
+        const timeLabel = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0') + ":" + now.getSeconds().toString().padStart(2, '0');
+        
+        liveChart.data.labels.push(timeLabel);
+        liveChart.data.datasets[0].data.push(data.h1);
+        liveChart.data.datasets[1].data.push(data.amp);
+
+        // Keep chart moving by removing old points
+        if (liveChart.data.labels.length > MAX_CHART_POINTS) {
+            liveChart.data.labels.shift();
+            liveChart.data.datasets[0].data.shift();
+            liveChart.data.datasets[1].data.shift();
+        }
+        liveChart.update();
+
+        // --- 4. Add to Scrolling Table ---
+        const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${record.id}</strong></td>
-            <td>${record.h1.toFixed(4)}</td>
-            <td>${record.amp.toFixed(4)}</td>
-            <td><span class="badge ${badgeClass}">${statusText}</span></td>
-            <td class="narrative">${record.narrative}</td>
+            <td>${timeLabel}</td>
+            <td><strong>${data.id}</strong></td>
+            <td>${data.h1.toFixed(4)}</td>
+            <td>${data.amp.toFixed(4)}</td>
+            <td><span class="badge ${stateClass}">${statusText}</span></td>
+            <td>${narrative}</td>
         `;
-        tbody.appendChild(tr);
-    });
+        tbody.insertBefore(tr, tbody.firstChild);
+
+        // Loop Sequence
+        currentIndex++;
+        if (currentIndex >= simulationSequence.length) currentIndex = 0; 
+    }
 </script>
 
 </body>
