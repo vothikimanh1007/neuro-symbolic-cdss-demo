@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neuro-Symbolic CDSS Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --bg-color: #f4f7f6;
+            --green: #27ae60;
+            --yellow: #f39c12;
+            --red: #e74c3c;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0; background-color: var(--bg-color); color: #333;
+        }
+        header {
+            background-color: var(--primary); color: white;
+            padding: 2rem; text-align: center;
+        }
+        header h1 { margin: 0 0 10px 0; font-size: 1.8rem; }
+        header p { margin: 0; font-size: 1rem; opacity: 0.9; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card h2 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #ecf0f1; font-weight: 600; }
+        
+        .badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; color: white; display: inline-block; }
+        .badge.green { background-color: var(--green); }
+        .badge.yellow { background-color: var(--yellow); color: #333; }
+        .badge.red { background-color: var(--red); }
+        .narrative { font-size: 0.85em; color: #555; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Multimodal Neuro-Symbolic Clinical Decision Support</h1>
+    <p>Non-Euclidean Topological Representations as Real-Time Guardrails for Medical LLMs</p>
+</header>
+
+<div class="container">
+    <div class="grid">
+        <div class="card">
+            <h2>Topological Profile Constraints</h2>
+            <canvas id="statsChart"></canvas>
+            <p style="font-size: 0.8em; margin-top: 15px; color: #7f8c8d;">
+                *Data reflects embedded Takens' delay and Vietoris-Rips filtration metrics. Safe bounds act as hard mathematical guardrails.
+            </p>
+        </div>
+        
+        <div class="card">
+            <h2>System Overview</h2>
+            <p><strong>Status:</strong> <span style="color: #27ae60; font-weight: bold;">Active</span></p>
+            <p>This dashboard demonstrates the integration of Topological Data Analysis (TDA) with Clinical Large Language Models (LLMs).</p>
+            <p>By extracting scale-invariant tokens (<strong>H1 Persistence Entropy</strong> and <strong>Topological Amplitude</strong>) from continuous ECG signals, the system establishes a mathematical guardrail. If these topological coordinates breach safe mathematical bounds, the system intercepts and halts potential semantic hallucinations from the LLM.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Live Clinical NLP Adjudication Log</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Record</th>
+                    <th>H1 Entropy</th>
+                    <th>Amplitude</th>
+                    <th>Guardrail Status</th>
+                    <th>LLM Narrative Output</th>
+                </tr>
+            </thead>
+            <tbody id="nlpTableBody">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. EMBEDDED DATASETS
+    // ==========================================
+    
+    // Extracted from tda_statistical_profile.json
+    const statsProfile = {
+        "NORMAL_SINUS": { "H1": 5.4159, "Amp": 0.0630 },
+        "NOISY_SIGNAL": { "H1": 5.7102, "Amp": 0.0433 },
+        "ARRHYTHMIA_PVC": { "H1": 4.9128, "Amp": 0.0527 }
+    };
+
+    // Extracted from tda_nlp_analysis_results.csv
+    const nlpResults = [
+        { id: "231", h1: 6.0438, amp: 0.0897, code: "CLINICAL_CODE_GREEN", narrative: "SYSTEM REPORT: Stable, healthy cardiac state verified. Attractor manifold retains perfectly balanced and continuous toroidal loops." },
+        { id: "100", h1: 6.0803, amp: 0.0445, code: "CLINICAL_CODE_YELLOW", narrative: "CLINICAL CONSULTATION: High-frequency topological noise or mechanical motion artifact detected. The patient is physically safe; please verify and stabilize the ECG electrode straps." },
+        { id: "101", h1: 5.7903, amp: 0.0228, code: "CLINICAL_CODE_YELLOW", narrative: "CLINICAL CONSULTATION: High-frequency topological noise or mechanical motion artifact detected. Attractor loops show high complexity but co-occurring low amplitude." },
+        { id: "234", h1: 8.8554, amp: 0.0593, code: "CLINICAL_CODE_RED", narrative: "GUARDRAIL ALERT: Topological markers indicative of severe anomaly or signal corruption. LLM generation halted to prevent clinical hallucination." }
+    ];
+
+    // ==========================================
+    // 2. RENDER CHART (Chart.js)
+    // ==========================================
+    const ctx = document.getElementById('statsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Normal Sinus', 'Noisy Signal', 'Arrhythmia PVC'],
+            datasets: [
+                {
+                    label: 'Mean H1 Entropy',
+                    data: [statsProfile.NORMAL_SINUS.H1, statsProfile.NOISY_SIGNAL.H1, statsProfile.ARRHYTHMIA_PVC.H1],
+                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                    borderColor: 'rgba(41, 128, 185, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Mean Amplitude (Scaled x100)',
+                    data: [statsProfile.NORMAL_SINUS.Amp * 100, statsProfile.NOISY_SIGNAL.Amp * 100, statsProfile.ARRHYTHMIA_PVC.Amp * 100],
+                    backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                    borderColor: 'rgba(192, 57, 43, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true } },
+            plugins: { legend: { position: 'top' } }
+        }
+    });
+
+    // ==========================================
+    // 3. RENDER TABLE DATA
+    // ==========================================
+    const tbody = document.getElementById('nlpTableBody');
+    nlpResults.forEach(record => {
+        const tr = document.createElement('tr');
+        
+        // Determine badge styling based on the clinical code
+        let badgeClass = 'green';
+        let statusText = 'SAFE';
+        if (record.code.includes('YELLOW')) { badgeClass = 'yellow'; statusText = 'WARNING'; }
+        if (record.code.includes('RED')) { badgeClass = 'red'; statusText = 'HALTED'; }
+
+        tr.innerHTML = `
+            <td><strong>${record.id}</strong></td>
+            <td>${record.h1.toFixed(4)}</td>
+            <td>${record.amp.toFixed(4)}</td>
+            <td><span class="badge ${badgeClass}">${statusText}</span></td>
+            <td class="narrative">${record.narrative}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+</script>
+
+</body>
+</html>
